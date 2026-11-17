@@ -27,6 +27,8 @@ jobs:
         run: bun run check-types
 
       - name: Build
+        env:
+          EXPO_PUBLIC_SERVER_URL: http://localhost:3000
         run: bun run build
 
       - name: Test
