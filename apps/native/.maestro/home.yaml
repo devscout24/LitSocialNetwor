@@ -1,0 +1,4 @@
+appId: com.betterfullstack.lit.socialnetwor
+---
+- launchApp
+- assertVisible: "Better Fullstack"

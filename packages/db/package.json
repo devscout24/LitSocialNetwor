@@ -1,0 +1,32 @@
+{
+  "name": "@Lit-SocialNetwor/db",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
+    "db:migrate": "drizzle-kit migrate"
+  },
+  "dependencies": {
+    "@Lit-SocialNetwor/env": "workspace:*",
+    "dotenv": "catalog:",
+    "drizzle-orm": "^0.45.3",
+    "pg": "^8.23.1",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@Lit-SocialNetwor/config": "workspace:*",
+    "@types/pg": "^8.23.1",
+    "drizzle-kit": "^0.31.11",
+    "typescript": "catalog:"
+  }
+}

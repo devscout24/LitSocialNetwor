@@ -1,0 +1,67 @@
+{
+  "name": "Lit-SocialNetwor",
+  "private": true,
+  "workspaces": {
+    "packages": [
+      "apps/*",
+      "packages/*"
+    ],
+    "catalog": {
+      "dotenv": "^17.4.2",
+      "zod": "^4.6.5",
+      "typescript": "^6.0.3",
+      "@types/bun": "^1.4.2",
+      "hono": "^4.12.27",
+      "@trpc/server": "^11.19.0",
+      "better-auth": "1.6.22",
+      "@types/react": "~19.2.18",
+      "vitest": "4.1.8",
+      "@vitest/ui": "4.1.8",
+      "@vitest/coverage-v8": "4.1.8",
+      "jsdom": "^29.1.1",
+      "@playwright/test": "^1.63.0",
+      "playwright": "^1.63.0",
+      "tailwindcss": "^4.3.3",
+      "@trpc/client": "^11.19.0",
+      "@better-auth/core": "1.6.22",
+      "@better-auth/expo": "1.6.22"
+    }
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "check-types": "turbo check-types",
+    "dev:web": "turbo -F web dev",
+    "dev:native": "turbo -F native dev",
+    "dev:server": "turbo -F server dev",
+    "db:push": "turbo -F @Lit-SocialNetwor/db db:push",
+    "db:studio": "turbo -F @Lit-SocialNetwor/db db:studio",
+    "db:generate": "turbo -F @Lit-SocialNetwor/db db:generate",
+    "db:migrate": "turbo -F @Lit-SocialNetwor/db db:migrate",
+    "test": "bun run --filter web test && bun run --filter server test && bun run --filter @Lit-SocialNetwor/api test && bun run --filter native test",
+    "lint:eslint": "eslint .",
+    "format:prettier": "prettier --write .",
+    "format:prettier:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@Lit-SocialNetwor/env": "workspace:*",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@Lit-SocialNetwor/config": "workspace:*",
+    "@eslint/js": "^10.0.1",
+    "@types/bun": "catalog:",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "turbo": "2.10.11",
+    "typescript": "catalog:",
+    "typescript-eslint": "^8.71.0"
+  },
+  "overrides": {
+    "kysely": "0.28.17"
+  },
+  "packageManager": "bun@1.4.4"
+}
