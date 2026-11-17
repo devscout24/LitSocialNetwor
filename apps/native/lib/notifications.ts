@@ -20,10 +20,14 @@ export async function registerForPushNotificationsAsync() {
   }
 
   if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
-      name: "default",
-      importance: Notifications.AndroidImportance.MAX,
-    });
+    try {
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "default",
+        importance: Notifications.AndroidImportance.MAX,
+      });
+    } catch {
+      // Notification channels are not fully supported in Expo Go on Android.
+    }
   }
 
   if (!Device.isDevice) {

@@ -19,4 +19,21 @@ const uniwindConfig = withUniwindConfig(config, {
   dtsFile: "./uniwind-types.d.ts",
 });
 
+const uniwindResolveRequest = uniwindConfig.resolver.resolveRequest;
+uniwindConfig.resolver.resolveRequest = (context, moduleName, platform) => {
+  const normalizedOrigin = (context.originModulePath || "").replace(/\\/g, "/");
+
+  // Prevent Uniwind from intercepting react-native imports inside Expo packages (expo-asset, @expo/vector-icons, etc.),
+  // which require React Native APIs (such as AssetRegistry) that Uniwind's components shim does not export.
+  if (
+    moduleName === "react-native" &&
+    (normalizedOrigin.includes("node_modules/expo") ||
+      normalizedOrigin.includes("node_modules/@expo/"))
+  ) {
+    return context.resolveRequest(context, "react-native", platform);
+  }
+
+  return uniwindResolveRequest(context, moduleName, platform);
+};
+
 module.exports = uniwindConfig;

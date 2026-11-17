@@ -2,7 +2,7 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { Link } from "expo-router";
 import { Drawer } from "expo-router/drawer";
 import { useThemeColor } from "heroui-native";
-import React, { useCallback } from "react";
+import { useCallback } from "react";
 import { Pressable, Text } from "react-native";
 
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -37,7 +37,7 @@ function DrawerLayout() {
             <Ionicons
               name="home-outline"
               size={size}
-              color={focused ? color : themeColorForeground}
+              color={(focused ? color : themeColorForeground) as string}
             />
           ),
         }}
@@ -53,7 +53,7 @@ function DrawerLayout() {
             <MaterialIcons
               name="border-bottom"
               size={size}
-              color={focused ? color : themeColorForeground}
+              color={(focused ? color : themeColorForeground) as string}
             />
           ),
           headerRight: () => (

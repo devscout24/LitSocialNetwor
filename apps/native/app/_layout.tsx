@@ -12,7 +12,7 @@ import { useUpdateCheck } from "@/lib/updates";
 import { queryClient } from "@/utils/trpc";
 
 export const unstable_settings = {
-  initialRouteName: "(drawer)",
+  anchor: "(drawer)",
 };
 
 function StackLayout() {
