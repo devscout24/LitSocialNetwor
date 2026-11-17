@@ -5,12 +5,12 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "Lit-SocialNetwor",
-    "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "scheme": "lit-socialnetwor",
+    "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.betterfullstack.lit.socialnetwor"
+      "bundleIdentifier": "com.betterfullstack.lit.socialnetwor",
+      "newArchEnabled": true
     },
     "android": {
       "adaptiveIcon": {
@@ -20,7 +20,17 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.betterfullstack.lit.socialnetwor"
+      "package": "com.betterfullstack.lit.socialnetwor",
+      "newArchEnabled": true,
+      "statusBar": {
+        "barStyle": "light-content",
+        "backgroundColor": "#07070E",
+        "translucent": true
+      },
+      "navigationBar": {
+        "barStyle": "dark-content",
+        "backgroundColor": "#07070E"
+      }
     },
     "web": {
       "output": "static",
