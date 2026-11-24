@@ -1,45 +1,46 @@
 # Lit-SocialNetwor
 
-Created with [Better Fullstack](https://github.com/Marve10s/Better-Fullstack).
+Monorepo for **Lit Social**, powered by **Bun workspaces**, **Turborepo**, and a **self-hosted Supabase** backend running on the project owner's VPS.
 
-## Applications and resources
+## Applications and Packages
 
-- **astro** (typescript, frontend): `apps/web`; part `frontend:typescript:astro`
-- **hono** (typescript, backend): `apps/server`; part `backend:typescript:hono`
-- **postgres** (universal, database): `packages/db`; part `database:universal:postgres`
-- **native-uniwind** (react-native, mobile): `apps/native`; part `mobile:react-native:native-uniwind`
-- **eslint** (universal, codeQuality): `.`; part `codequality:universal:eslint`
-- **prettier** (universal, codeQuality): `.`; part `codequality:universal:prettier`
-- **docker-compose** (universal, containerOrchestration): `.`; part `containerorchestration:universal:docker-compose`
-- **github-actions** (universal, continuousIntegration): `.`; part `continuousintegration:universal:github-actions`
-- **turborepo** (universal, workspaceRunner): `.`; part `workspacerunner:universal:turborepo`
+- **`apps/native`** (Expo / React Native + Uniwind): Primary mobile application. Connects directly to the self-hosted VPS Supabase instance (Auth, Postgres with RLS, Storage).
+- **`apps/web`** (Astro + Tailwind CSS v4): Web landing page (future use), pre-wired with a Supabase browser client.
+- **`apps/dashboard`** (Vite + React + TypeScript): Admin dashboard shell (future use), pre-wired with a Supabase browser client.
+- **`packages/supabase`** (`@Lit-SocialNetwor/supabase`): Shared Supabase client factory, `Database` TypeScript types, table/bucket constants, and SQL migration files (`packages/supabase/supabase/migrations/`).
+- **`packages/env`** (`@Lit-SocialNetwor/env`): Zod-validated environment variable loaders for `native`, `web`, and `dashboard`.
+- **`packages/config`** (`@Lit-SocialNetwor/config`): Shared TypeScript base configuration.
 
 ## Setup
 
-Install the SDKs for the selected languages before preparing dependencies. SwiftUI needs macOS, Xcode, and XcodeGen; Kotlin Android apps need a JDK and Android SDK; Flutter needs the Flutter SDK. Rust web apps also need the WebAssembly target and Trunk or Dioxus CLI.
-
-JavaScript dependencies are installed at the workspace root. Each native application keeps its own toolchain. Native package scripts require `bash` on PATH; install Git Bash on Windows. Run the shell commands below in Bash.
-
-If dependencies were not prepared during creation, run:
+1. Install dependencies from the workspace root:
 
 ```sh
 bun install
 ```
 
-Copy each application's `.env.example` to `.env` when present and configure database credentials before starting database-backed services.
+2. Apply the SQL migrations in `packages/supabase/supabase/migrations/` to your self-hosted VPS Supabase instance (via Supabase Studio SQL Editor or `psql`). See [packages/supabase/README.md](packages/supabase/README.md) for step-by-step instructions.
 
-## Local development
+3. Copy `.env.example` to `.env` in each app (`apps/native/.env`, `apps/web/.env`, `apps/dashboard/.env`) and fill in your self-hosted VPS Supabase URL and anon key.
 
-Start the selected web applications and backend services together:
+## Local Development
+
+Start the development servers:
 
 ```sh
+# All apps via Turborepo
 bun run dev
+
+# Or run individual apps:
+bun run dev:native
+bun run dev:web
+bun run dev:dashboard
 ```
 
-The supervisor stops the other services when one exits. Native mobile applications run separately so you can choose a simulator or device. Open Kotlin applications in Android Studio.
+## Type Checking & Builds
 
-## Connections
-
-See each application's README and environment file for its local endpoint.
-
-Cross-language clients communicate over HTTP. Framework-specific clients such as tRPC are used only with compatible backends. Generated connection files identify the default backend; additional services retain their own paths and endpoints.
+```sh
+bun run check-types
+bun run build
+bun test
+```

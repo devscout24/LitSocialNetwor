@@ -1,0 +1,5 @@
+-- =============================================================================
+-- Seed File: packages/supabase/supabase/seed.sql
+-- Intentionally empty for now.
+-- Do not add fake users or sample product data here.
+-- =============================================================================

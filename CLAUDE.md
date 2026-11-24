@@ -4,124 +4,101 @@ This file provides context about the project for AI assistants.
 
 ## Project Overview
 
-- **Ecosystem**: Typescript
+- **Product**: Lit Social (social + events platform)
+- **Ecosystem**: TypeScript monorepo (Bun workspaces + Turborepo)
+- **Backend Architecture**: 100% self-hosted **Supabase** running on the owner's VPS (Supabase Auth, PostgreSQL with Row Level Security, Supabase Storage, and Supabase-managed auth emails). There is no custom backend server and no local Docker stack in this repository.
 
 ## Tech Stack
 
-- **Runtime**: bun
-- **Package Manager**: bun
+- **Runtime & Package Manager**: Bun (`bun@1.4.4`)
+- **Monorepo Runner**: Turborepo
 
-### Frontend
+### Mobile App (`apps/native` — Current Priority)
 
-- Framework: astro, native-uniwind
-- CSS: tailwind
+- **Framework**: Expo (~58) / React Native (0.88.1)
+- **Navigation**: Expo Router (Drawer + Tabs + Modal)
+- **Styling & UI**: Uniwind (Tailwind v4 for React Native), HeroUI Native
+- **Backend Client**: `@supabase/supabase-js` via `@Lit-SocialNetwor/supabase` with `expo-secure-store` session persistence
+- **Deep Linking Scheme**: `lit-socialnetwor://`
 
-### Backend
+### Web Landing Page (`apps/web` — Future Use)
 
-- Framework: hono
-- API: trpc
-- Validation: zod
+- **Framework**: Astro 7
+- **CSS**: Tailwind CSS v4 (`@tailwindcss/vite`)
+- **Backend Client**: `@Lit-SocialNetwor/supabase` (`apps/web/src/lib/supabase.ts`)
 
-### Database
+### Admin Dashboard (`apps/dashboard` — Future Use)
 
-- Database: postgres
-- ORM: drizzle
+- **Framework**: Vite + plain React 19 + TypeScript (plain CSS, no UI library)
+- **Backend Client**: `@Lit-SocialNetwor/supabase` (`apps/dashboard/src/lib/supabase.ts`)
 
-### Authentication
+### Shared Packages (`packages/*`)
 
-- Provider: better-auth
-
-### Additional Features
-
-- Testing: vitest-playwright
-- Email: resend
-- Realtime: socket-io
-- Job Queue: bullmq
-- Caching: redis
-- Logging: winston
+- **`packages/supabase` (`@Lit-SocialNetwor/supabase`)**:
+  - `src/client.ts` — Shared `createSupabaseClient` factory
+  - `src/types.ts` — `Database` TypeScript definitions mirroring the SQL schema
+  - `src/constants.ts` — Central table names (`profiles`) and storage bucket names (`avatars`, `posts`, `stories`, `events`)
+  - `supabase/migrations/` — Ordered SQL migration files applied to the owner's self-hosted VPS Supabase instance
+  - `supabase/seed.sql` — Intentionally empty seed file
+- **`packages/env` (`@Lit-SocialNetwor/env`)**:
+  - Zod-validated environment loaders (`./native`, `./web`, `./dashboard`)
+- **`packages/config` (`@Lit-SocialNetwor/config`)**:
+  - Base TypeScript configuration (`tsconfig.base.json`)
 
 ## Project Structure
 
 ```
 Lit-SocialNetwor/
 ├── apps/
-│   ├── web/         # Frontend application
-│   ├── native/      # Mobile application (React Native)
-│   └── server/      # Backend API
+│   ├── native/      # Mobile application (Expo / React Native — primary focus)
+│   ├── web/         # Astro web landing page (future use)
+│   └── dashboard/   # Vite + React admin dashboard shell (future use)
 ├── packages/
-│   ├── api/         # API layer
-│   ├── auth/        # Authentication
-│   └── db/          # Database schema
+│   ├── supabase/    # Shared Supabase client, types, constants & SQL migrations
+│   ├── env/         # Validated environment schemas (native, web, dashboard)
+│   └── config/      # Shared TypeScript configuration
 ```
+
+## Environment Variables
+
+All applications connect directly to the self-hosted VPS Supabase instance via environment variables:
+
+- **`apps/native/.env`** (see `apps/native/.env.example`):
+  - `EXPO_PUBLIC_SUPABASE_URL`
+  - `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+  - `EXPO_PUBLIC_AUTH_REDIRECT_PATH` (default: `auth/callback`)
+  - `EXPO_PUBLIC_EAS_PROJECT_ID` (optional)
+- **`apps/web/.env`** (see `apps/web/.env.example`):
+  - `PUBLIC_SUPABASE_URL`
+  - `PUBLIC_SUPABASE_ANON_KEY`
+- **`apps/dashboard/.env`** (see `apps/dashboard/.env.example`):
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_ANON_KEY`
+- **Owner-only admin/CLI (`.env` at repo root, git-ignored)**:
+  - `SUPABASE_SERVICE_ROLE_KEY` — **NEVER** import or bundle the service role key in any client app (`native`, `web`, `dashboard`). Client apps use only the anon key, protected by Postgres RLS.
 
 ## Common Commands
 
-- `bun install` - Install dependencies
-- `bun dev` - Start development server
-- `bun build` - Build for production
-- `bun test` - Run tests
-- `bun db:push` - Push database schema
-- `bun db:studio` - Open database UI
+- `bun install` — Install dependencies
+- `bun dev` — Start development servers via Turborepo
+- `bun run dev:native` — Start Expo development server for mobile
+- `bun run dev:web` — Start Astro web server
+- `bun run dev:dashboard` — Start Vite dashboard server (port 5173)
+- `bun run build` — Build applications for production
+- `bun run check-types` — Run TypeScript type checks across all workspaces
+- `bun test` — Run test suites
+- `bun run db:types` — Print instructions to regenerate `packages/supabase/src/types.ts` from the VPS Supabase instance
 
-## Better Fullstack project context
+## Better Fullstack Governance Notice
 
-`bts.jsonc` is the authority for the current Stack Graph. Its `stackParts` array owns role selection and `ownerPartId` bindings. Top-level option fields are a compatibility projection and must not become a second mutation path.
-
-### Stack Parts, ownership, and evidence
-
-- `backend.api:typescript:trpc`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.auth:typescript:better-auth`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.caching:typescript:redis`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.email:typescript:resend`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.jobQueue:typescript:bullmq`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.logging:typescript:winston`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.orm:typescript:drizzle`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.rateLimit:typescript:arcjet`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.realtime:typescript:socket-io`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.runtime:typescript:bun`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.search:typescript:elasticsearch`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.testing:typescript:vitest-playwright`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend.validation:typescript:zod`. It belongs to `backend:typescript:hono`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `backend:typescript:hono`. Its generated target is `apps/server`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `codeQuality:universal:eslint`. Evidence is not mapped for this installed option.
-- `codeQuality:universal:prettier`. Evidence is not mapped for this installed option.
-- `containerOrchestration:universal:docker-compose`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `continuousIntegration:universal:github-actions`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `database:universal:postgres`. Its generated target is `packages/db`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `frontend.css:typescript:tailwind`. It belongs to `frontend:typescript:astro`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `frontend.forms:typescript:react-hook-form`. It belongs to `frontend:typescript:astro`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `frontend:typescript:astro`. Its generated target is `apps/web`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `mobile.auth:react-native:better-auth`. It belongs to `mobile:react-native:native-uniwind`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `mobile.deepLinking:react-native:expo-linking`. It belongs to `mobile:react-native:native-uniwind`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `mobile.navigation:react-native:expo-router`. It belongs to `mobile:react-native:native-uniwind`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `mobile.ota:react-native:expo-updates`. It belongs to `mobile:react-native:native-uniwind`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `mobile.push:react-native:expo-notifications`. It belongs to `mobile:react-native:native-uniwind`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `mobile.testing:react-native:maestro-react-native-testing-library`. It belongs to `mobile:react-native:native-uniwind`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `mobile.ui:react-native:uniwind`. It belongs to `mobile:react-native:native-uniwind`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `mobile:react-native:native-uniwind`. Its generated target is `apps/native`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-- `workspaceRunner:universal:turborepo`. Evidence is `listed` with `unverified` freshness. Verification maintainer: @Marve10s.
-
-### Installed-version authority
-
-Use `bts.jsonc` for the generator and schema version. Use local package manifests and lockfiles for installed dependency versions. Do not assume that documentation for a newer Better Fullstack release matches this project.
-
-### Compatibility and lifecycle safety
-
-Run `create-better-fullstack context --json` for bounded roles, capabilities, evidence, compatibility issues, and safe next actions. Run `create-better-fullstack doctor --json` before repairing graph drift. Existing-project writes must start with a plan and use the exact review token. Use `create-better-fullstack recipes check --json` before editing recipe-owned paths or managed regions, and use recipe history plus project recovery commands to undo a reviewed operation.
-
-User code outside an explicit Better Fullstack managed region is not generator-owned. Missing or changed managed-region hashes stop recipe planning for manual review.
-
-<!-- <better-fullstack:recipes sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855> -->
-
-<!-- </better-fullstack:recipes> -->
+This repository was originally scaffolded with Better Fullstack (`bts.jsonc`), but the backend has been intentionally migrated to a self-hosted VPS Supabase architecture (`packages/supabase`).
+- **Do NOT run `create-better-fullstack` to regenerate or mutate the backend, database, or auth layers.**
+- `bts.jsonc` has been pruned to reflect only the remaining frontend, mobile, and workspace tooling parts.
 
 ## Maintenance
 
-Keep CLAUDE.md updated when:
-
+Keep `CLAUDE.md` and `AGENTS.md` updated when:
 - Adding/removing dependencies
-- Changing project structure
+- Changing project structure or Supabase schema migrations
 - Adding new features or services
 - Modifying build/dev workflows
-
-AI assistants should suggest updates to this file when they notice relevant changes.

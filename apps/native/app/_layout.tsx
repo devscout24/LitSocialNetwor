@@ -1,5 +1,5 @@
 import "@/global.css";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
@@ -12,7 +12,8 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { AppThemeProvider } from "@/contexts/app-theme-context";
 import { AuthProvider } from "@/lib/auth-state";
 import { useUpdateCheck } from "@/lib/updates";
-import { queryClient } from "@/utils/trpc";
+
+export const queryClient = new QueryClient();
 
 export const unstable_settings = {
   anchor: "(drawer)",

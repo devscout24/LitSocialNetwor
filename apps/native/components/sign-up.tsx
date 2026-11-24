@@ -2,73 +2,36 @@ import { Button, FieldError, Input, Label, Spinner, Surface, TextField } from "h
 import { useState } from "react";
 import { Text, View } from "react-native";
 
-import { authClient } from "@/lib/auth-client";
-import { queryClient } from "@/utils/trpc";
-
-function signUpHandler({
-  name,
-  email,
-  password,
-  setError,
-  setIsLoading,
-  setName,
-  setEmail,
-  setPassword,
-}: {
-  name: string;
-  email: string;
-  password: string;
-  setError: (error: string | null) => void;
-  setIsLoading: (loading: boolean) => void;
-  setName: (name: string) => void;
-  setEmail: (email: string) => void;
-  setPassword: (password: string) => void;
-}) {
-  setIsLoading(true);
-  setError(null);
-
-  authClient.signUp.email(
-    {
-      name,
-      email,
-      password,
-    },
-    {
-      onError(error) {
-        setError(error.error?.message || "Failed to sign up");
-        setIsLoading(false);
-      },
-      onSuccess() {
-        setName("");
-        setEmail("");
-        setPassword("");
-        queryClient.refetchQueries();
-      },
-      onFinished() {
-        setIsLoading(false);
-      },
-    },
-  );
-}
+import { useAppAuth } from "@/lib/auth-state";
 
 export function SignUp() {
+  const { signUp } = useAppAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function handlePress() {
-    signUpHandler({
+  async function handlePress() {
+    setIsLoading(true);
+    setError(null);
+
+    const result = await signUp({
       name,
       email,
       password,
-      setError,
-      setIsLoading,
-      setName,
-      setEmail,
-      setPassword,
     });
+
+    setIsLoading(false);
+
+    if (!result.success) {
+      setError(result.error || "Failed to sign up");
+      return;
+    }
+
+    setName("");
+    setEmail("");
+    setPassword("");
   }
 
   return (

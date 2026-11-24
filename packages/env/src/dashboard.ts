@@ -1,0 +1,20 @@
+import { createEnv } from "@t3-oss/env-core";
+import { z } from "zod";
+
+type ImportMetaEnvRecord = Record<string, string | boolean | undefined>;
+
+export const env = createEnv({
+  clientPrefix: "VITE_",
+  client: {
+    VITE_SUPABASE_URL: z.url({
+      error:
+        "Missing or invalid VITE_SUPABASE_URL. Set it in apps/dashboard/.env pointing at your self-hosted VPS Supabase instance.",
+    }),
+    VITE_SUPABASE_ANON_KEY: z.string().min(1, {
+      error:
+        "Missing VITE_SUPABASE_ANON_KEY. Set it in apps/dashboard/.env with your VPS Supabase anon key.",
+    }),
+  },
+  runtimeEnv: (import.meta as ImportMeta & { env: ImportMetaEnvRecord }).env,
+  emptyStringAsUndefined: true,
+});

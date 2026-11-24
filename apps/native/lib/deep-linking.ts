@@ -1,6 +1,6 @@
 import * as Linking from "expo-linking";
 
-export const appScheme = "Lit-SocialNetwor";
+export const appScheme = "lit-socialnetwor";
 
 export const linking = {
   prefixes: [Linking.createURL("/"), `${appScheme}://`],
@@ -14,10 +14,12 @@ export const linking = {
   },
 };
 
-export function getAuthRedirectUri(path = "auth/callback") {
-  return Linking.createURL(path);
+export function getAuthRedirectUri(
+  path = process.env.EXPO_PUBLIC_AUTH_REDIRECT_PATH || "auth/callback",
+) {
+  return Linking.createURL(path, { scheme: appScheme });
 }
 
 export function getDeepLinkUrl(path = "") {
-  return Linking.createURL(path);
+  return Linking.createURL(path, { scheme: appScheme });
 }

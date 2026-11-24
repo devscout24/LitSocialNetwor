@@ -2,10 +2,10 @@ import { Button, FieldError, Input, Label, Spinner, Surface, TextField } from "h
 import { useState } from "react";
 import { Text, View } from "react-native";
 
-import { authClient } from "@/lib/auth-client";
-import { queryClient } from "@/utils/trpc";
+import { useAppAuth } from "@/lib/auth-state";
 
 function SignIn() {
+  const { signIn } = useAppAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -15,26 +15,16 @@ function SignIn() {
     setIsLoading(true);
     setError(null);
 
-    await authClient.signIn.email(
-      {
-        email,
-        password,
-      },
-      {
-        onError(error) {
-          setError(error.error?.message || "Failed to sign in");
-          setIsLoading(false);
-        },
-        onSuccess() {
-          setEmail("");
-          setPassword("");
-          queryClient.refetchQueries();
-        },
-        onFinished() {
-          setIsLoading(false);
-        },
-      },
-    );
+    const result = await signIn({ email, password });
+    setIsLoading(false);
+
+    if (!result.success) {
+      setError(result.error || "Failed to sign in");
+      return;
+    }
+
+    setEmail("");
+    setPassword("");
   }
 
   return (

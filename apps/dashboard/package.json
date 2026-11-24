@@ -1,0 +1,27 @@
+{
+  "name": "dashboard",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5173",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --port 5173",
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@Lit-SocialNetwor/env": "workspace:*",
+    "@Lit-SocialNetwor/supabase": "workspace:*",
+    "@supabase/supabase-js": "catalog:",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@Lit-SocialNetwor/config": "workspace:*",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "catalog:",
+    "vite": "^6.2.0"
+  }
+}

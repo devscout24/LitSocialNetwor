@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
@@ -18,6 +19,7 @@ import { AppleIcon, GoogleIcon, GradientWave, LitLogo } from "@/components/lit-b
 import { useAppAuth } from "@/lib/auth-state";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+void SCREEN_WIDTH;
 
 export type AuthMode = "signin" | "signup" | "recover";
 
@@ -28,7 +30,7 @@ interface AuthFlowProps {
 
 export function AuthFlow({ initialMode = "signin", onSuccess }: AuthFlowProps) {
   const insets = useSafeAreaInsets();
-  const { signIn, signUp, socialSignIn } = useAppAuth();
+  const { signIn, signUp, resetPasswordForEmail, socialSignIn } = useAppAuth();
   const [mode, setMode] = useState<AuthMode>(initialMode);
 
   const [name, setName] = useState("");
@@ -50,12 +52,17 @@ export function AuthFlow({ initialMode = "signin", onSuccess }: AuthFlowProps) {
   };
 
   const handleSignIn = async () => {
-    if (!email) {
+    if (!email.trim()) {
       setError("Please fill in your email address.");
+      return;
+    }
+    if (!password) {
+      setError("Please enter your password.");
       return;
     }
     setIsLoading(true);
     setError(null);
+    setSuccessMessage(null);
     const res = await signIn({ email, password });
     setIsLoading(false);
     if (!res.success) {
@@ -66,8 +73,12 @@ export function AuthFlow({ initialMode = "signin", onSuccess }: AuthFlowProps) {
   };
 
   const handleSignUp = async () => {
-    if (!email) {
+    if (!email.trim()) {
       setError("Please fill in your email address.");
+      return;
+    }
+    if (!password) {
+      setError("Please enter a password.");
       return;
     }
     if (!acceptedTerms) {
@@ -76,8 +87,9 @@ export function AuthFlow({ initialMode = "signin", onSuccess }: AuthFlowProps) {
     }
     setIsLoading(true);
     setError(null);
+    setSuccessMessage(null);
     const res = await signUp({
-      name: name.trim() || username.trim() || "Lit Member",
+      name: name.trim(),
       email: email.trim(),
       password,
       username: username.trim(),
@@ -85,30 +97,43 @@ export function AuthFlow({ initialMode = "signin", onSuccess }: AuthFlowProps) {
     setIsLoading(false);
     if (!res.success) {
       setError(res.error || "Failed to create account.");
+    } else if (res.needsEmailConfirmation) {
+      setSuccessMessage("Account created! Please check your inbox to confirm your email.");
     } else {
       onSuccess?.();
     }
   };
 
   const handleSocial = async (provider: "google" | "apple") => {
-    setIsLoading(true);
     setError(null);
-    await socialSignIn(provider);
-    setIsLoading(false);
+    setSuccessMessage(null);
+    const res = await socialSignIn(provider);
+    if (!res.success) {
+      const message = res.error || "Social sign-in is not available yet.";
+      setError(message);
+      if (Platform.OS !== "web") {
+        Alert.alert("Not Available Yet", message);
+      }
+      return;
+    }
     onSuccess?.();
   };
 
   const handleRecoverPassword = async () => {
-    if (!email) {
+    if (!email.trim()) {
       setError("Please enter your email address.");
       return;
     }
     setIsLoading(true);
     setError(null);
-    setTimeout(() => {
-      setIsLoading(false);
+    setSuccessMessage(null);
+    const res = await resetPasswordForEmail(email.trim());
+    setIsLoading(false);
+    if (!res.success) {
+      setError(res.error || "Failed to send password reset link.");
+    } else {
       setSuccessMessage("Password reset link sent! Check your inbox.");
-    }, 800);
+    }
   };
 
   const isSignIn = mode === "signin";
@@ -296,6 +321,7 @@ export function AuthFlow({ initialMode = "signin", onSuccess }: AuthFlowProps) {
                 styles.primaryBtn,
                 pressed && { opacity: 0.88 },
               ]}
+              disabled={isLoading}
               onPress={isSignIn ? handleSignIn : isSignUp ? handleSignUp : handleRecoverPassword}
             >
               {isLoading ? (

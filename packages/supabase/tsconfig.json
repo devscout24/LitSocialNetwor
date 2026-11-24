@@ -1,0 +1,4 @@
+{
+  "extends": "@Lit-SocialNetwor/config/tsconfig.base.json",
+  "include": ["src/**/*"]
+}
