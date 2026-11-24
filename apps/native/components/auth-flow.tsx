@@ -1,9 +1,7 @@
-import { Ionicons } from "@expo/vector-icons";
 import React, { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,31 +13,43 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { FigmaSvg } from "@/components/figma-assets";
 import { AppleIcon, GoogleIcon, GradientWave, LitLogo } from "@/components/lit-brand";
 import { useAppAuth } from "@/lib/auth-state";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
-void SCREEN_WIDTH;
-
-export type AuthMode = "signin" | "signup" | "recover";
+export type AuthMode = "signin" | "signup" | "recover" | "update";
 
 interface AuthFlowProps {
   initialMode?: AuthMode;
   onSuccess?: () => void;
 }
 
+function maskEmailForDisplay(rawEmail: string): string {
+  const trimmed = rawEmail.trim();
+  if (!trimmed || !trimmed.includes("@")) {
+    return "e***@gmail.com**";
+  }
+  const [local, domain] = trimmed.split("@");
+  const firstChar = local?.[0] ?? "e";
+  return `${firstChar}***@${domain}**`;
+}
+
 export function AuthFlow({ initialMode = "signin", onSuccess }: AuthFlowProps) {
   const insets = useSafeAreaInsets();
-  const { signIn, signUp, resetPasswordForEmail, socialSignIn } = useAppAuth();
+  const { signIn, signUp, resetPasswordForEmail, updatePassword, socialSignIn } = useAppAuth();
   const [mode, setMode] = useState<AuthMode>(initialMode);
 
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [acceptedTerms, setAcceptedTerms] = useState(true);
+  const [resetLinkSent, setResetLinkSent] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +58,7 @@ export function AuthFlow({ initialMode = "signin", onSuccess }: AuthFlowProps) {
   const resetState = (newMode: AuthMode) => {
     setError(null);
     setSuccessMessage(null);
+    setResetLinkSent(false);
     setMode(newMode);
   };
 
@@ -132,271 +143,421 @@ export function AuthFlow({ initialMode = "signin", onSuccess }: AuthFlowProps) {
     if (!res.success) {
       setError(res.error || "Failed to send password reset link.");
     } else {
-      setSuccessMessage("Password reset link sent! Check your inbox.");
+      setResetLinkSent(true);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword) {
+      setError("Please enter a new password.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+    setSuccessMessage(null);
+    const res = await updatePassword(newPassword);
+    setIsLoading(false);
+    if (!res.success) {
+      setError(res.error || "Failed to update password.");
+    } else {
+      setSuccessMessage("Password updated! You can now sign in.");
+      resetState("signin");
     }
   };
 
   const isSignIn = mode === "signin";
   const isSignUp = mode === "signup";
   const isRecover = mode === "recover";
+  const isUpdate = mode === "update";
 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.root}
     >
-      {/* Full-bleed gradient anchored top-right – no padding, matches Figma */}
+      {/* Top-right full-bleed glow matching Figma */}
       <GradientWave height={280} />
 
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: Math.max(insets.top + 24, 44), paddingBottom: Math.max(insets.bottom + 32, 48) },
+          {
+            paddingTop: Math.max(insets.top + 16, 32),
+            paddingBottom: Math.max(insets.bottom + 24, 32),
+          },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Inner content panel – 335px wide, centred, matching Figma Content Container */}
-        <View style={styles.panel}>
-
-          {/* ── Back button (Recover only) ── */}
-          {isRecover && (
-            <Pressable style={styles.backRow} onPress={() => resetState("signin")} hitSlop={12}>
+        <View style={styles.canvas}>
+          {/* ── Back button (Recover & Update Password screens: 283:749 / 283:783) ── */}
+          {(isRecover || isUpdate) && (
+            <Pressable
+              style={styles.backRow}
+              onPress={() => resetState("signin")}
+              hitSlop={12}
+            >
               <View style={styles.backCircle}>
-                <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
+                <FigmaSvg name="icon_back_chevron" />
               </View>
               <Text style={styles.backLabel}>Back to Sign In</Text>
             </Pressable>
           )}
 
-          {/* ── Logo + headline ── */}
-          <View style={styles.headerBlock}>
-            <LitLogo width={134} height={56} />
-            <Text style={styles.headline}>
-              {isSignIn
-                ? "Your community is waiting for you"
-                : isSignUp
-                  ? "Join the scene. Create your vibe"
-                  : "Need a new password?"}
-            </Text>
-            {isRecover && (
-              <Text style={styles.recoverSub}>
-                No worries. Enter your email below to receive reset instructions.
-              </Text>
-            )}
+          {/* ── Main 335px Content Container (top: 100px in Figma) ── */}
+          <View
+            style={[
+              styles.panel,
+              (isRecover || isUpdate) ? styles.panelWithBack : styles.panelDefault,
+            ]}
+          >
+            {/* ── Logo + Headline (283:614 / 283:669 / 283:732 / 283:791 / 283:757) ── */}
+            <View style={styles.headerBlock}>
+              <LitLogo />
+              <View style={styles.headlineWrap}>
+                <Text style={styles.headline}>
+                  {isSignIn
+                    ? "Your community is waiting for you"
+                    : isSignUp
+                      ? "Join the scene. Create your vibe"
+                      : isRecover && resetLinkSent
+                        ? "We'll get you back in."
+                        : "Need a new password?"}
+                </Text>
+                {isRecover && !resetLinkSent && (
+                  <Text style={styles.subHeadline}>
+                    No worries. Enter your email below to receive reset instructions.
+                  </Text>
+                )}
+                {isUpdate && (
+                  <Text style={styles.subHeadline}>
+                    Almost there! Set a new password to regain access to your account.
+                  </Text>
+                )}
+              </View>
+            </View>
+
+            {/* ── Feedback banners ── */}
+            {error ? (
+              <View style={styles.errorBanner}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+            {successMessage ? (
+              <View style={styles.successBanner}>
+                <Text style={styles.successText}>{successMessage}</Text>
+              </View>
+            ) : null}
+
+            {/* ── Form Container ── */}
+            <View style={[styles.formContainer, isSignUp && { gap: 24 }]}>
+              <View style={styles.topFormContainer}>
+                <View style={styles.upperFormContainer}>
+                  <View style={styles.fieldsStack}>
+                    {/* Sign-Up: Full Name + Username (283:678, gap 16) */}
+                    {isSignUp && (
+                      <View style={styles.nameRow}>
+                        <View style={styles.nameCol}>
+                          <View style={styles.labelWrap}>
+                            <Text style={styles.label}>Full Name</Text>
+                          </View>
+                          <View style={styles.pill}>
+                            <TextInput
+                              style={styles.input}
+                              value={name}
+                              onChangeText={setName}
+                              placeholder="Enter full name"
+                              placeholderTextColor="rgba(255,255,255,0.3)"
+                              autoCapitalize="words"
+                            />
+                          </View>
+                        </View>
+                        <View style={styles.nameCol}>
+                          <View style={styles.labelWrap}>
+                            <Text style={styles.label}>Username</Text>
+                          </View>
+                          <View style={styles.pill}>
+                            <TextInput
+                              style={styles.input}
+                              value={username}
+                              onChangeText={setUsername}
+                              placeholder="Unique username"
+                              placeholderTextColor="rgba(255,255,255,0.3)"
+                              autoCapitalize="none"
+                            />
+                          </View>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Email Field (Sign In, Sign Up, Recover) */}
+                    {!isUpdate && (
+                      <View style={styles.fieldGroup}>
+                        <View style={styles.labelWrap}>
+                          <Text style={styles.label}>Email</Text>
+                        </View>
+                        <View style={styles.pill}>
+                          <TextInput
+                            style={styles.input}
+                            value={email}
+                            onChangeText={setEmail}
+                            placeholder="you@example.com"
+                            placeholderTextColor="rgba(255,255,255,0.3)"
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            autoComplete="email"
+                          />
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Password Field (Sign In + Sign Up) */}
+                    {(isSignIn || isSignUp) && (
+                      <View style={styles.fieldGroup}>
+                        <View style={styles.labelWrap}>
+                          <Text style={styles.label}>Password</Text>
+                        </View>
+                        <View style={[styles.pill, styles.pillRow]}>
+                          <TextInput
+                            style={styles.input}
+                            value={password}
+                            onChangeText={setPassword}
+                            placeholder="••••••••••"
+                            placeholderTextColor="rgba(255,255,255,0.3)"
+                            secureTextEntry={!showPassword}
+                            autoCapitalize="none"
+                          />
+                          <Pressable
+                            onPress={() => setShowPassword((v) => !v)}
+                            hitSlop={8}
+                            style={styles.eyeBtn}
+                          >
+                            <FigmaSvg name="icon_eye_off" />
+                          </Pressable>
+                        </View>
+                      </View>
+                    )}
+
+                    {/* Update Password Fields (283:765) */}
+                    {isUpdate && (
+                      <>
+                        <View style={styles.fieldGroup}>
+                          <View style={styles.labelWrap}>
+                            <Text style={styles.label}>New Password</Text>
+                          </View>
+                          <View style={[styles.pill, styles.pillRow]}>
+                            <TextInput
+                              style={styles.input}
+                              value={newPassword}
+                              onChangeText={setNewPassword}
+                              placeholder="••••••••••"
+                              placeholderTextColor="rgba(255,255,255,0.3)"
+                              secureTextEntry={!showPassword}
+                              autoCapitalize="none"
+                            />
+                            <Pressable
+                              onPress={() => setShowPassword((v) => !v)}
+                              hitSlop={8}
+                              style={styles.eyeBtn}
+                            >
+                              <FigmaSvg name="icon_eye_off" />
+                            </Pressable>
+                          </View>
+                        </View>
+                        <View style={styles.fieldGroup}>
+                          <View style={styles.labelWrap}>
+                            <Text style={styles.label}>Confirm Password</Text>
+                          </View>
+                          <View style={[styles.pill, styles.pillRow]}>
+                            <TextInput
+                              style={styles.input}
+                              value={confirmPassword}
+                              onChangeText={setConfirmPassword}
+                              placeholder="••••••••••"
+                              placeholderTextColor="rgba(255,255,255,0.3)"
+                              secureTextEntry={!showConfirmPassword}
+                              autoCapitalize="none"
+                            />
+                            <Pressable
+                              onPress={() => setShowConfirmPassword((v) => !v)}
+                              hitSlop={8}
+                              style={styles.eyeBtn}
+                            >
+                              <FigmaSvg name="icon_eye_off" />
+                            </Pressable>
+                          </View>
+                        </View>
+                      </>
+                    )}
+                  </View>
+
+                  {/* Remember Me + Need help signing in? (283:636) */}
+                  {isSignIn && (
+                    <View style={styles.optionsRow}>
+                      <Pressable
+                        style={styles.rememberRow}
+                        onPress={() => setRememberMe((v) => !v)}
+                        hitSlop={8}
+                      >
+                        {rememberMe ? (
+                          <FigmaSvg name="icon_checkbox_checked" />
+                        ) : (
+                          <View style={styles.uncheckedCircle} />
+                        )}
+                        <Text style={styles.rememberLabel}>Remember me</Text>
+                      </Pressable>
+                      <Pressable onPress={() => resetState("recover")} hitSlop={8}>
+                        <Text style={styles.needHelpLink}>Need help signing in?</Text>
+                      </Pressable>
+                    </View>
+                  )}
+
+                  {/* Terms Checkbox Row (283:701) */}
+                  {isSignUp && (
+                    <Pressable
+                      style={styles.termsRow}
+                      onPress={() => setAcceptedTerms((v) => !v)}
+                      hitSlop={8}
+                    >
+                      {acceptedTerms ? (
+                        <FigmaSvg name="icon_checkbox_checked" />
+                      ) : (
+                        <View style={styles.uncheckedCircle} />
+                      )}
+                      <Text style={styles.termsText}>
+                        Creating an account means you accept our{" "}
+                        <Text style={styles.termsLink}>Terms</Text> of Use and{" "}
+                        <Text style={styles.termsLink}>Privacy Policy</Text>.
+                      </Text>
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* Primary Orange Button (283:643 / 283:706 / 283:747 / 283:781) */}
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.primaryBtn,
+                    pressed && { opacity: 0.88 },
+                  ]}
+                  disabled={isLoading}
+                  onPress={
+                    isSignIn
+                      ? handleSignIn
+                      : isSignUp
+                        ? handleSignUp
+                        : isRecover
+                          ? handleRecoverPassword
+                          : handleUpdatePassword
+                  }
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={styles.primaryBtnText}>
+                      {isSignIn
+                        ? "Sign In"
+                        : isSignUp
+                          ? "Join LIT"
+                          : isRecover
+                            ? "Send Reset Link"
+                            : "Update Password"}
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+
+              {/* ── Social Sign-In Options (Sign In & Create Account: 283:645 / 283:649) ── */}
+              {(isSignIn || isSignUp) && (
+                <>
+                  <View style={styles.dividerRow}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>or continue with</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
+
+                  <View style={styles.socialStack}>
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.socialBtn,
+                        pressed && { opacity: 0.8 },
+                      ]}
+                      onPress={() => handleSocial("google")}
+                    >
+                      <GoogleIcon />
+                      <Text style={styles.socialBtnText}>Sign In</Text>
+                    </Pressable>
+
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.socialBtn,
+                        pressed && { opacity: 0.8 },
+                      ]}
+                      onPress={() => handleSocial("apple")}
+                    >
+                      <AppleIcon />
+                      <Text style={styles.socialBtnText}>Sign In</Text>
+                    </Pressable>
+                  </View>
+                </>
+              )}
+            </View>
           </View>
 
-          {/* ── Feedback banners ── */}
-          {error ? (
-            <View style={styles.errorBanner}>
-              <Ionicons name="alert-circle" size={18} color="#FF8787" />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          ) : null}
-          {successMessage ? (
-            <View style={styles.successBanner}>
-              <Ionicons name="checkmark-circle" size={18} color="#69DB7C" />
-              <Text style={styles.successText}>{successMessage}</Text>
-            </View>
-          ) : null}
-
-          {/* ── Form fields ── */}
-          <View style={styles.formBlock}>
-
-            {/* Sign-up: Full Name + Username */}
-            {isSignUp && (
-              <View style={styles.nameRow}>
-                <View style={styles.nameCol}>
-                  <Text style={styles.label}>Full Name</Text>
-                  <View style={styles.pill}>
-                    <TextInput
-                      style={styles.input}
-                      value={name}
-                      onChangeText={setName}
-                      placeholder="Full name"
-                      placeholderTextColor="rgba(255,255,255,0.3)"
-                      autoCapitalize="words"
-                    />
-                  </View>
-                </View>
-                <View style={styles.nameCol}>
-                  <Text style={styles.label}>Username</Text>
-                  <View style={styles.pill}>
-                    <TextInput
-                      style={styles.input}
-                      value={username}
-                      onChangeText={setUsername}
-                      placeholder="Username"
-                      placeholderTextColor="rgba(255,255,255,0.3)"
-                      autoCapitalize="none"
-                    />
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* Email */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.label}>Email</Text>
-              <View style={styles.pill}>
-                <TextInput
-                  style={styles.input}
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="you@example.com"
-                  placeholderTextColor="rgba(255,255,255,0.3)"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                />
-              </View>
-            </View>
-
-            {/* Password (Sign In + Sign Up) */}
-            {!isRecover && (
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Password</Text>
-                <View style={[styles.pill, styles.pillRow]}>
-                  <TextInput
-                    style={[styles.input, { flex: 1 }]}
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="••••••••••"
-                    placeholderTextColor="rgba(255,255,255,0.3)"
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                  />
-                  <Pressable onPress={() => setShowPassword((v) => !v)} hitSlop={8}>
-                    <Ionicons
-                      name={showPassword ? "eye-off-outline" : "eye-outline"}
-                      size={20}
-                      color="rgba(255,255,255,0.5)"
-                    />
-                  </Pressable>
-                </View>
-              </View>
-            )}
-
-            {/* Remember Me / Need help  (Sign In only) */}
-            {isSignIn && (
-              <View style={styles.optionsRow}>
-                <Pressable
-                  style={styles.checkRow}
-                  onPress={() => setRememberMe((v) => !v)}
-                  hitSlop={8}
-                >
-                  <View style={[styles.checkbox, rememberMe && styles.checkboxOn]}>
-                    {rememberMe && <Ionicons name="checkmark" size={12} color="#FFFFFF" />}
-                  </View>
-                  <Text style={styles.checkLabel}>Remember me</Text>
-                </Pressable>
-                <Pressable onPress={() => resetState("recover")} hitSlop={8}>
-                  <Text style={styles.accentLink}>Need help signing in?</Text>
-                </Pressable>
-              </View>
-            )}
-
-            {/* Terms (Sign Up only) */}
-            {isSignUp && (
+          {/* ── Bottom Switch Link (283:663 / 283:726) ── */}
+          {(isSignIn || isSignUp) && (
+            <View style={styles.footerRow}>
+              <Text style={styles.footerText}>
+                {isSignIn ? "Don’t have an Account?" : "Already have an Account?"}
+              </Text>
               <Pressable
-                style={styles.termsRow}
-                onPress={() => setAcceptedTerms((v) => !v)}
+                onPress={() => resetState(isSignIn ? "signup" : "signin")}
                 hitSlop={8}
               >
-                <View style={[styles.checkbox, acceptedTerms && styles.checkboxOn]}>
-                  {acceptedTerms && <Ionicons name="checkmark" size={12} color="#FFFFFF" />}
-                </View>
-                <Text style={styles.termsText}>
-                  I agree to the{" "}
-                  <Text style={styles.accentInline}>Terms of Use</Text>
-                  {" "}and{" "}
-                  <Text style={styles.accentInline}>Privacy Policy</Text>
+                <Text style={styles.footerLink}>
+                  {isSignIn ? "Create Account" : "Sign In"}
                 </Text>
               </Pressable>
-            )}
-
-            {/* Primary CTA */}
-            <Pressable
-              style={({ pressed }) => [
-                styles.primaryBtn,
-                pressed && { opacity: 0.88 },
-              ]}
-              disabled={isLoading}
-              onPress={isSignIn ? handleSignIn : isSignUp ? handleSignUp : handleRecoverPassword}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.primaryBtnText}>
-                  {isSignIn ? "Sign In" : isSignUp ? "Join LIT" : "Send Reset Link"}
-                </Text>
-              )}
-            </Pressable>
-          </View>
-
-          {/* ── Social login ── */}
-          {!isRecover && (
-            <>
-              {/* Divider */}
-              <View style={styles.dividerRow}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>or continue with</Text>
-                <View style={styles.dividerLine} />
-              </View>
-
-              {/* Google */}
-              <Pressable
-                style={({ pressed }) => [styles.socialBtn, pressed && { opacity: 0.8 }]}
-                onPress={() => handleSocial("google")}
-              >
-                <GoogleIcon size={20} />
-                <Text style={styles.socialBtnText}>Continue with Google</Text>
-              </Pressable>
-
-              {/* Apple */}
-              <Pressable
-                style={({ pressed }) => [styles.socialBtn, styles.socialBtnApple, pressed && { opacity: 0.8 }]}
-                onPress={() => handleSocial("apple")}
-              >
-                <AppleIcon size={20} />
-                <Text style={styles.socialBtnText}>Continue with Apple</Text>
-              </Pressable>
-            </>
+            </View>
           )}
-
-          {/* ── Footer switch ── */}
-          <View style={styles.footerRow}>
-            {isSignIn ? (
-              <>
-                <Text style={styles.footerText}>Don't have an Account?</Text>
-                <Pressable onPress={() => resetState("signup")} hitSlop={8}>
-                  <Text style={styles.footerLink}> Create Account</Text>
-                </Pressable>
-              </>
-            ) : isSignUp ? (
-              <>
-                <Text style={styles.footerText}>Already have an account?</Text>
-                <Pressable onPress={() => resetState("signin")} hitSlop={8}>
-                  <Text style={styles.footerLink}> Sign In</Text>
-                </Pressable>
-              </>
-            ) : (
-              <>
-                <Text style={styles.footerText}>Remembered it?</Text>
-                <Pressable onPress={() => resetState("signin")} hitSlop={8}>
-                  <Text style={styles.footerLink}> Sign In</Text>
-                </Pressable>
-              </>
-            )}
-          </View>
         </View>
       </ScrollView>
+
+      {/* ── Figma "Reset link sent" Modal Overlay (283:788) ── */}
+      {isRecover && resetLinkSent && (
+        <View style={styles.modalBackdrop}>
+          <View style={styles.resetModalCard}>
+            <GradientWave height={180} position="top-left" />
+            <Pressable
+              style={styles.resetModalClose}
+              onPress={() => {
+                setResetLinkSent(false);
+                setMode("update");
+              }}
+              hitSlop={12}
+            >
+              <FigmaSvg name="icon_close" />
+            </Pressable>
+            <View style={styles.resetModalContent}>
+              <FigmaSvg name="icon_mailbox" />
+              <View style={styles.resetModalTextWrap}>
+                <Text style={styles.resetModalTitle}>{`You're Almost There!`}</Text>
+                <Text style={styles.resetModalSub}>
+                  {`We've emailed instructions to help you regain access to your account. ${maskEmailForDisplay(email)}`}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
 
 const PANEL_W = 335;
-const H_INPUT = 45;
 
 const styles = StyleSheet.create({
   root: {
@@ -407,33 +568,55 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: "center",
   },
+  canvas: {
+    width: 375,
+    maxWidth: "100%",
+    minHeight: 748,
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+  },
   panel: {
     width: PANEL_W,
+    gap: 40,
+    alignItems: "center",
+  },
+  panelDefault: {
+    marginTop: 52,
+  },
+  panelWithBack: {
+    marginTop: 32,
   },
 
-  /* Back */
+  /* Back button (283:749) */
   backRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 20,
+    gap: 12,
     alignSelf: "flex-start",
   },
   backCircle: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.08)",
+    borderRadius: 88,
+    backgroundColor: "rgba(255,255,255,0.05)",
     alignItems: "center",
     justifyContent: "center",
   },
-  backLabel: { color: "#FFFFFF", fontSize: 15, fontWeight: "500" },
+  backLabel: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "500",
+  },
 
-  /* Header */
+  /* Header (283:614) */
   headerBlock: {
     alignItems: "center",
-    marginBottom: 40,
     gap: 16,
+  },
+  headlineWrap: {
+    alignItems: "center",
+    gap: 4,
   },
   headline: {
     color: "#FFFFFF",
@@ -442,143 +625,210 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 24,
   },
-  recoverSub: {
-    color: "rgba(255,255,255,0.7)",
+  subHeadline: {
+    color: "rgba(255,255,255,0.8)",
     fontSize: 14,
+    fontWeight: "400",
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 16.8,
+    width: 257,
   },
 
-  /* Feedback */
+  /* Feedback banners */
   errorBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(255,107,107,0.12)",
+    width: "100%",
+    backgroundColor: "rgba(239,68,68,0.14)",
     borderWidth: 1,
-    borderColor: "rgba(255,107,107,0.3)",
-    borderRadius: 12,
+    borderColor: "rgba(239,68,68,0.35)",
+    borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    marginBottom: 20,
+    marginTop: -20,
   },
-  errorText: { color: "#FF8787", fontSize: 13, flex: 1 },
+  errorText: {
+    color: "#FF8787",
+    fontSize: 13,
+    textAlign: "center",
+  },
   successBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: "rgba(81,207,102,0.12)",
+    width: "100%",
+    backgroundColor: "rgba(81,207,102,0.14)",
     borderWidth: 1,
-    borderColor: "rgba(81,207,102,0.3)",
-    borderRadius: 12,
+    borderColor: "rgba(81,207,102,0.35)",
+    borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
-    marginBottom: 20,
+    marginTop: -20,
   },
-  successText: { color: "#69DB7C", fontSize: 13, flex: 1 },
+  successText: {
+    color: "#69DB7C",
+    fontSize: 13,
+    textAlign: "center",
+  },
 
-  /* Form */
-  formBlock: { gap: 16 },
-  nameRow: { flexDirection: "row", gap: 12 },
-  nameCol: { flex: 1, gap: 8 },
-  fieldGroup: { gap: 8 },
+  /* Form layout (283:619) */
+  formContainer: {
+    width: "100%",
+    gap: 32,
+  },
+  topFormContainer: {
+    width: "100%",
+    gap: 24,
+  },
+  upperFormContainer: {
+    width: "100%",
+    gap: 12,
+  },
+  fieldsStack: {
+    width: "100%",
+    gap: 16,
+  },
+  nameRow: {
+    flexDirection: "row",
+    gap: 16,
+    width: "100%",
+  },
+  nameCol: {
+    flex: 1,
+    gap: 8,
+  },
+  fieldGroup: {
+    width: "100%",
+    gap: 8,
+  },
+  labelWrap: {
+    paddingHorizontal: 12,
+    width: "100%",
+  },
   label: {
     color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "400",
-    paddingLeft: 4,
   },
-  /* Figma: bg rgba(255,255,255,0.05), border-bottom rgba(255,255,255,0.1), rounded-[88px] */
   pill: {
-    height: H_INPUT,
+    height: 45,
     backgroundColor: "rgba(255,255,255,0.05)",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.1)",
     borderRadius: 88,
     paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 13,
     justifyContent: "center",
   },
   pillRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingRight: 14,
   },
   input: {
     color: "#FFFFFF",
     fontSize: 14,
+    lineHeight: 20,
     padding: 0,
     flex: 1,
   },
+  eyeBtn: {
+    width: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
 
-  /* Options row */
+  /* Remember me & Need help row (283:636) */
   optionsRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: -4,
+    gap: 12,
+    width: "100%",
   },
-  checkRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  checkbox: {
+  rememberRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flex: 1,
+  },
+  uncheckedCircle: {
     width: 24,
     height: 24,
-    borderRadius: 6,
+    borderRadius: 12,
     borderWidth: 1.5,
     borderColor: "rgba(255,255,255,0.3)",
     backgroundColor: "rgba(255,255,255,0.05)",
-    alignItems: "center",
-    justifyContent: "center",
   },
-  checkboxOn: { backgroundColor: "#ED4113", borderColor: "#ED4113" },
-  checkLabel: { color: "#FFFFFF", fontSize: 14 },
-  accentLink: { color: "#6780FF", fontSize: 14, fontWeight: "500" },
+  rememberLabel: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "400",
+  },
+  needHelpLink: {
+    color: "#6780FF",
+    fontSize: 14,
+    fontWeight: "500",
+    textAlign: "right",
+  },
 
-  /* Terms row */
+  /* Terms row (283:701) */
   termsRow: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    marginTop: -4,
+    alignItems: "center",
+    gap: 8,
+    width: "100%",
   },
   termsText: {
-    color: "rgba(255,255,255,0.8)",
-    fontSize: 13,
-    lineHeight: 18,
-    flex: 1,
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "400",
+    lineHeight: 16,
+    width: 299,
   },
-  accentInline: { color: "#6780FF", fontWeight: "500" },
+  termsLink: {
+    color: "#6780FF",
+  },
 
-  /* Primary button – Figma: bg #ED4113, rounded-[88px], h=44 */
+  /* Primary Button (283:643) */
   primaryBtn: {
     backgroundColor: "#ED4113",
     borderRadius: 88,
+    padding: 12,
     height: 44,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
-    shadowColor: "#ED4113",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 6,
+    width: "100%",
   },
-  primaryBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "500" },
+  primaryBtnText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "500",
+    textAlign: "center",
+  },
 
-  /* Divider */
+  /* Divider (283:645) */
   dividerRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 24,
+    gap: 12,
+    width: "100%",
   },
-  dividerLine: { flex: 1, height: 1, backgroundColor: "rgba(255,255,255,0.12)" },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
   dividerText: {
     color: "rgba(255,255,255,0.4)",
     fontSize: 12,
-    marginHorizontal: 12,
+    lineHeight: 16,
   },
 
-  /* Social buttons – Figma: same pill style as inputs */
+  /* Social Buttons (283:649) */
+  socialStack: {
+    width: "100%",
+    gap: 16,
+  },
   socialBtn: {
-    height: H_INPUT,
+    height: 45,
     backgroundColor: "rgba(255,255,255,0.05)",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.1)",
@@ -586,19 +836,95 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
-    marginBottom: 16,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 13,
+    width: "100%",
   },
-  socialBtnApple: { marginBottom: 0 },
-  socialBtnText: { color: "#FFFFFF", fontSize: 16, fontWeight: "500" },
+  socialBtnText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "500",
+  },
 
-  /* Footer */
+  /* Footer (283:663 / 283:726) */
   footerRow: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    gap: 8,
     marginTop: 32,
   },
-  footerText: { color: "rgba(255,255,255,0.85)", fontSize: 14 },
-  footerLink: { color: "#6780FF", fontSize: 14, fontWeight: "600" },
+  footerText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "400",
+  },
+  footerLink: {
+    color: "#6780FF",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+
+  /* Reset Link Sent Modal (283:788) */
+  modalBackdrop: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: "rgba(255,255,255,0.4)",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: 20,
+  },
+  resetModalCard: {
+    width: 335,
+    height: 263,
+    backgroundColor: "#07070E",
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    overflow: "hidden",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+  },
+  resetModalClose: {
+    position: "absolute",
+    top: 15,
+    right: 17,
+    width: 36,
+    height: 36,
+    borderRadius: 88,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 10,
+  },
+  resetModalContent: {
+    width: 291,
+    alignItems: "center",
+    gap: 16,
+  },
+  resetModalTextWrap: {
+    width: "100%",
+    alignItems: "center",
+    gap: 4,
+  },
+  resetModalTitle: {
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontWeight: "500",
+    lineHeight: 28.8,
+    textAlign: "center",
+  },
+  resetModalSub: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "400",
+    lineHeight: 19.2,
+    textAlign: "center",
+  },
 });

@@ -2,11 +2,16 @@ import React from "react";
 import { StyleSheet, View } from "react-native";
 
 import { AuthFlow } from "@/components/auth-flow";
+import { SplashScreenView } from "@/components/lit-brand";
 import { WelcomeScreen } from "@/components/welcome-screen";
 import { useAppAuth } from "@/lib/auth-state";
 
 export default function Home() {
-  const { session } = useAppAuth();
+  const { session, isLoading } = useAppAuth();
+
+  if (isLoading) {
+    return <SplashScreenView />;
+  }
 
   return (
     <View style={styles.container}>
