@@ -4,13 +4,24 @@ Shared Supabase package for the `Lit-SocialNetwor` monorepo. Replaces the old cu
 
 ## Architecture Overview
 
-- **Self-Hosted VPS Instance**: Supabase runs on the project owner's self-hosted VPS instance. This repository **never** starts a local Supabase stack or Docker containers.
+- **Self-Hosted VPS Instance**: Supabase runs on the project owner's self-hosted VPS instance (Dokploy). This repository **never** starts a local Supabase stack or Docker containers, and uses zero Supabase Cloud-only features.
 - **Package Contents**:
   - `src/client.ts` — Shared `createSupabaseClient(url, anonKey, options?)` factory typed against `Database`.
-  - `src/types.ts` — TypeScript `Database` schema types matching `supabase/migrations/`.
-  - `src/constants.ts` — Shared table (`profiles`) and storage bucket (`avatars`, `posts`, `stories`, `events`) constants.
-  - `supabase/migrations/` — Ordered SQL migration files to be applied to the VPS Supabase instance.
-  - `supabase/seed.sql` — Intentionally empty seed file.
+  - `src/types.ts` — TypeScript `Database` schema types matching `supabase/migrations/` (31 tables + 10 client-callable RPC functions).
+  - `src/constants.ts` — Shared table (`TABLES`, 31 tables) and storage bucket (`STORAGE_BUCKETS`: `avatars`, `posts`, `stories`, `events`) constants.
+  - `supabase/migrations/` — Ordered, re-runnable SQL migration files applied to the VPS Supabase instance:
+    0. `0001_init_profiles_and_storage.sql` — Base `public.profiles`, `set_updated_at()`, `handle_new_user()`, and storage buckets/policies (kept unmodified).
+    1. `20261124000001_fix_0001_and_extensions.sql` — `extensions` schema (`pgcrypto`, `pg_trgm`), `handle_new_user()` `check_violation` fix, bucket MIME/size limits, and private `stories` bucket.
+    2. `20261124000002_social_core.sql` — Profiles extension, settings, blocks, mutes, vibes, locations, hashtags, posts, media, tags, likes, comments, bookmarks, shares, stories, and story views.
+    3. `20261124000003_events.sql` — Events (with `timezone`), `event_media` carousel, schedules, highlights, ticket tiers, RSVPs, and ratings.
+    4. `20261124000004_ticketing.sql` — Non-truncating sequences, promo codes, ticket orders, order items, QR tickets, event staff, and Stripe webhook idempotency log.
+    5. `20261124000005_notifications_support.sql` — Server-triggered notifications, Expo push tokens, content reports, app ratings, FAQs, and support tickets.
+    6. `20261124000006_rls_and_grants.sql` — `can_view_profile_content()` helper, RLS on all 31 tables, and column-level grants.
+    7. `20261124000007_rpc_functions.sql` — Production RPCs (`get_home_feed`, `get_stories_tray`, `search_all`, `respond_to_vibe_request`, `record_story_view`, `validate_promo_code`, `check_in_ticket`, `request_account_deletion`, `create_pending_ticket_order`, `fulfill_order`, `recompute_counters`).
+    8. `20261124000008_cron_jobs.sql` — Scheduled `pg_cron` maintenance functions.
+  - `supabase/seed.sql` — Dev-only reference seed data (hashtags, venues, universities, FAQs with realistic zero counts).
+  - `supabase/tests/rls_attacks.sql` — Security & RLS attack verification suite.
+  - `SCHEMA_NOTES.md` — Full table matrix, client vs. server-only writes, Edge Function responsibilities, and open design questions.
 
 ---
 
@@ -19,39 +30,13 @@ Shared Supabase package for the `Lit-SocialNetwor` monorepo. Replaces the old cu
 Apply files in `supabase/migrations/` in filename order using either method below:
 
 ### Option A: Self-Hosted Supabase Studio (SQL Editor)
-1. Open your self-hosted Supabase Studio dashboard in the browser.
-2. Go to **SQL Editor** → **New query**.
-3. Copy and paste the contents of `supabase/migrations/20261124000000_init_profiles_and_storage.sql`.
-4. Click **Run**.
+Run each file in `packages/supabase/supabase/migrations/` in filename order (`0001_...` through `20261124000008_...`) inside **SQL Editor → New query**. For development environments, run `supabase/seed.sql` afterward.
 
 ### Option B: `psql` CLI against the VPS PostgreSQL port
 ```sh
-psql "$SUPABASE_DB_URL" -f packages/supabase/supabase/migrations/20261124000000_init_profiles_and_storage.sql
+export SUPABASE_DB_URL="postgresql://postgres:YOUR_DB_PASSWORD@YOUR_VPS_HOST:5432/postgres"
+
+for f in packages/supabase/supabase/migrations/*.sql; do
+  psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f "$f"
+done
 ```
-
----
-
-## Required Supabase Auth Configuration on the VPS
-
-For mobile password reset deep links to work in `apps/native`:
-1. In your self-hosted Supabase Auth configuration (Studio → Authentication → URL Configuration, or `GOTRUE_URI_ALLOW_LIST` on the VPS), add the mobile deep-link redirect URL to the allow-list:
-   - `lit-socialnetwor://auth/callback` (and `lit-socialnetwor://**` if wildcards are used)
-2. Ensure your VPS Supabase Auth SMTP / email settings are configured so password recovery and verification emails can be delivered.
-
----
-
-## Environment Variables per Application
-
-Each application connects directly to the VPS Supabase instance via its `.env` file (copied from `.env.example`):
-
-| Workspace | Environment Variables |
-| :--- | :--- |
-| `apps/native` | `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_AUTH_REDIRECT_PATH` (default `auth/callback`), `EXPO_PUBLIC_EAS_PROJECT_ID` (optional) |
-| `apps/web` | `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY` |
-| `apps/dashboard` | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` |
-| Owner-only CLI / admin | `SUPABASE_SERVICE_ROLE_KEY` (local git-ignored `.env` only — **never** imported by any app) |
-
-### Security Notice: Anon Key vs. Service Role Key
-
-- **Anon / Publishable Key (`*_SUPABASE_ANON_KEY`)**: Safe to use in client applications (`native`, `web`, `dashboard`) because **Row Level Security (RLS)** is enabled on `public.profiles` and `storage.objects`.
-- **Service Role Key (`SUPABASE_SERVICE_ROLE_KEY`)**: Bypasses all RLS policies. **NEVER** put the service role key in `apps/native`, `apps/web`, `apps/dashboard`, or any `EXPO_PUBLIC_*` / `PUBLIC_*` / `VITE_*` variable.

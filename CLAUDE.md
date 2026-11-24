@@ -36,10 +36,12 @@ This file provides context about the project for AI assistants.
 
 - **`packages/supabase` (`@Lit-SocialNetwor/supabase`)**:
   - `src/client.ts` — Shared `createSupabaseClient` factory
-  - `src/types.ts` — `Database` TypeScript definitions mirroring the SQL schema
-  - `src/constants.ts` — Central table names (`profiles`) and storage bucket names (`avatars`, `posts`, `stories`, `events`)
-  - `supabase/migrations/` — Ordered SQL migration files applied to the owner's self-hosted VPS Supabase instance
-  - `supabase/seed.sql` — Intentionally empty seed file
+  - `src/types.ts` — `Database` TypeScript definitions mirroring the 31-table production SQL schema and RPC functions
+  - `src/constants.ts` — Central table names (`TABLES`, 31 tables) and storage bucket names (`avatars`, `posts`, `stories`, `events`)
+  - `supabase/migrations/` — Ordered, re-runnable SQL migration files (`0001_init_profiles_and_storage.sql` and `20261124000001`..`20261124000008`)
+  - `supabase/seed.sql` — Dev-only seed file (hashtags, locations, FAQs with zero initial counts)
+  - `supabase/tests/rls_attacks.sql` — Security and RLS attack verification script
+  - `SCHEMA_NOTES.md` — Table write-access matrix, Edge Function contracts, and open questions
 - **`packages/env` (`@Lit-SocialNetwor/env`)**:
   - Zod-validated environment loaders (`./native`, `./web`, `./dashboard`)
 - **`packages/config` (`@Lit-SocialNetwor/config`)**:

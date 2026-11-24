@@ -32,6 +32,7 @@
     "dev:web": "turbo -F web dev",
     "dev:native": "turbo -F native dev",
     "dev:dashboard": "turbo -F dashboard dev",
+    "db:migrate": "bun packages/supabase/scripts/migrate.ts",
     "db:types": "echo 'To regenerate types from your self-hosted VPS Supabase instance, set SUPABASE_DB_URL and run: bunx supabase gen types typescript --db-url \"$SUPABASE_DB_URL\" > packages/supabase/src/types.ts'",
     "test": "bun run --filter web test && bun run --filter native test",
     "lint:eslint": "eslint .",

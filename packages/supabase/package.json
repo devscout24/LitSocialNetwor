@@ -12,7 +12,8 @@
     "./constants": "./src/constants.ts"
   },
   "scripts": {
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "migrate": "bun scripts/migrate.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "catalog:"

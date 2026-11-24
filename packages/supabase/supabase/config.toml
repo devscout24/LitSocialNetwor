@@ -1,0 +1,3 @@
+# Minimal Supabase CLI config for `--workdir packages/supabase`
+# No local Docker stack is used; migrations target the self-hosted VPS via `--db-url`.
+project_id = "lit-social"
