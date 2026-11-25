@@ -1,91 +1,71 @@
 import React from "react";
-import { Dimensions, StyleSheet, View } from "react-native";
-import Svg, {
-  Defs,
-  RadialGradient,
-  Rect,
-  Stop,
-} from "react-native-svg";
+import { Image, StyleSheet, View } from "react-native";
 
-import { FigmaSvg } from "@/components/figma-assets";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+import { FIGMA_IMAGES, FigmaSvg } from "@/components/figma-assets";
 
 /**
- * Full-bleed circular glow that matches the Figma "Upper gradient" –
- * a large red-orange radial blob anchored to the top-right corner,
- * fading to transparent, blending with the dark background.
+ * Pixel-accurate Figma "Upper gradient" / "Bottom gradient" wave (`283:612`, `283:667`, `283:834`, `283:574`, `283:581`, `283:813`).
+ *
+ * Uses @2x RGBA surface assets fitted directly to the Figma Gaussian-blurred (`stdDeviation=101.5px`)
+ * `mix-blend-mode: plus-lighter` wave render over `#07070E`, with a smooth alpha + RGB taper to zero
+ * so there is never a horizontal clipping boundary.
  */
 export function GradientWave({
-  height = 260,
+  height,
   opacity = 1,
   position = "top-right",
+  variant,
   style,
 }: {
   height?: number;
   opacity?: number;
   position?: "top-right" | "top-left" | "bottom-right";
+  variant?: "top" | "splash-top" | "splash-bottom" | "modal";
   style?: any;
 }) {
-  const W = Math.max(SCREEN_WIDTH, 375);
-  const H = height;
-  const SVG_W = W * 2;
-  const SVG_H = H * 1.6;
+  const resolvedVariant =
+    variant ??
+    (position === "bottom-right"
+      ? "splash-bottom"
+      : position === "top-left"
+        ? "splash-top"
+        : "top");
 
-  const isBottom = position === "bottom-right";
-  const isLeft = position === "top-left";
-  const cx = isLeft ? 0 : SVG_W;
-  const cy = isBottom ? SVG_H : 0;
+  const isBottom = resolvedVariant === "splash-bottom";
+  const defaultHeight =
+    resolvedVariant === "modal"
+      ? 130
+      : resolvedVariant === "splash-top"
+        ? 245
+        : resolvedVariant === "splash-bottom"
+          ? 248
+          : 275;
+
+  const finalHeight = height ?? defaultHeight;
+  const source =
+    resolvedVariant === "modal"
+      ? FIGMA_IMAGES.bg_modal_wave
+      : resolvedVariant === "splash-top"
+        ? FIGMA_IMAGES.bg_splash_top
+        : resolvedVariant === "splash-bottom"
+          ? FIGMA_IMAGES.bg_splash_bottom
+          : FIGMA_IMAGES.bg_top_wave;
 
   return (
     <View
       style={[
         styles.waveContainer,
         isBottom ? { top: undefined, bottom: 0 } : { top: 0 },
-        { height, opacity },
+        { height: finalHeight, opacity },
         style,
       ]}
       pointerEvents="none"
     >
-      <Svg
-        width={SVG_W}
-        height={SVG_H}
-        viewBox={`0 0 ${SVG_W} ${SVG_H}`}
-        style={[
-          { position: "absolute" },
-          isBottom ? { bottom: 0 } : { top: 0 },
-          isLeft ? { left: 0 } : { right: 0 },
-        ]}
-        fill="none"
-      >
-        <Defs>
-          <RadialGradient
-            id="glow1"
-            cx={cx}
-            cy={cy}
-            r={SVG_W * 0.75}
-            gradientUnits="userSpaceOnUse"
-          >
-            <Stop offset="0%" stopColor="#FF4500" stopOpacity="0.9" />
-            <Stop offset="25%" stopColor="#ED4113" stopOpacity="0.7" />
-            <Stop offset="55%" stopColor="#B02000" stopOpacity="0.3" />
-            <Stop offset="100%" stopColor="#07070E" stopOpacity="0" />
-          </RadialGradient>
-          <RadialGradient
-            id="glow2"
-            cx={cx}
-            cy={cy}
-            r={SVG_W * 0.45}
-            gradientUnits="userSpaceOnUse"
-          >
-            <Stop offset="0%" stopColor="#FF7040" stopOpacity="0.85" />
-            <Stop offset="40%" stopColor="#ED4113" stopOpacity="0.5" />
-            <Stop offset="100%" stopColor="#07070E" stopOpacity="0" />
-          </RadialGradient>
-        </Defs>
-        <Rect x={0} y={0} width={SVG_W} height={SVG_H} fill="url(#glow1)" />
-        <Rect x={0} y={0} width={SVG_W} height={SVG_H} fill="url(#glow2)" />
-      </Svg>
+      <Image
+        source={source}
+        style={styles.waveImage}
+        resizeMode="stretch"
+      />
     </View>
   );
 }
@@ -95,32 +75,34 @@ export function GradientWave({
  */
 export function LitLogo({
   variant = "auth",
+  width,
+  height,
 }: {
   variant?: "auth" | "header";
   width?: number;
   height?: number;
 }) {
   if (variant === "header") {
-    return <FigmaSvg name="logo_header" />;
+    return <FigmaSvg name="logo_header" width={width} height={height} />;
   }
-  return <FigmaSvg name="logo_full" />;
+  return <FigmaSvg name="logo_full" width={width} height={height} />;
 }
 
 /**
- * Exact Figma Splash Screen (`283:573`) with upper + lower glows,
- * orange gradient wolf-in-flame mark (`283:585`), LIT wordmark (`283:587`),
- * and VIBE - SHARE - CONNECT tagline (`283:592`).
+ * Exact Figma Splash Screen (`283:573`) with upper (`283:581`) + lower (`283:574`) blurred waves,
+ * orange gradient wolf-in-flame mark (`283:585`, 139.54x183.64), LIT wordmark (`283:587`, 139.54x60),
+ * and VIBE - SHARE - CONNECT tagline (`283:592`, 128x10.47).
  */
 export function SplashScreenView() {
   return (
     <View style={styles.splashRoot}>
-      <GradientWave height={320} position="top-left" />
-      <GradientWave height={320} position="bottom-right" />
+      <GradientWave variant="splash-top" height={245} />
+      <GradientWave variant="splash-bottom" height={248} />
       <View style={styles.splashCenter}>
-        <FigmaSvg name="splash_wolf" />
+        <FigmaSvg name="splash_wolf" width={139.54} height={183.64} />
         <View style={styles.splashWordmarkGroup}>
-          <FigmaSvg name="splash_lit_wordmark" />
-          <FigmaSvg name="splash_tagline" />
+          <FigmaSvg name="splash_lit_wordmark" width={139.54} height={60} />
+          <FigmaSvg name="splash_tagline" width={128} height={10.47} />
         </View>
       </View>
     </View>
@@ -142,6 +124,10 @@ const styles = StyleSheet.create({
     right: 0,
     width: "100%",
     overflow: "hidden",
+  },
+  waveImage: {
+    width: "100%",
+    height: "100%",
   },
   splashRoot: {
     flex: 1,

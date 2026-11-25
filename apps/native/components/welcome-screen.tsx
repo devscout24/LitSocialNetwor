@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   Image,
   ImageSourcePropType,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -10,6 +11,13 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, {
+  Circle,
+  Defs,
+  LinearGradient as SvgLinearGradient,
+  RadialGradient as SvgRadialGradient,
+  Stop,
+} from "react-native-svg";
 
 import { FIGMA_IMAGES, FigmaSvg } from "@/components/figma-assets";
 import { GradientWave } from "@/components/lit-brand";
@@ -318,6 +326,7 @@ export function WelcomeScreen({ session }: WelcomeScreenProps) {
   if (subScreen === "create-post") {
     return (
       <View style={styles.root}>
+        <GradientWave height={275} />
         <View style={[styles.subHeaderRow, { marginTop: topPad }]}>
           <Pressable
             style={styles.roundIconBtn}
@@ -1159,6 +1168,7 @@ export function WelcomeScreen({ session }: WelcomeScreenProps) {
   if (subScreen === "settings") {
     return (
       <View style={styles.root}>
+        <GradientWave height={275} />
         <View style={[styles.subHeaderRow, { marginTop: topPad }]}>
           <Pressable
             style={styles.roundIconBtn}
@@ -1346,8 +1356,8 @@ export function WelcomeScreen({ session }: WelcomeScreenProps) {
 
   return (
     <View style={styles.root}>
-      {/* Top-right full-bleed glow */}
-      <GradientWave height={260} />
+      {/* Top full-bleed blurred wave matching Figma (283:834) */}
+      <GradientWave height={275} />
 
       {/* ── TAB 1: HOME (283:833) ── */}
       {activeTab === "home" && (
@@ -1890,7 +1900,13 @@ export function WelcomeScreen({ session }: WelcomeScreenProps) {
             style={styles.bottomNavTab}
             onPress={() => setActiveTab("home")}
           >
-            {activeTab === "home" && <View style={styles.navActiveGlow} />}
+            {activeTab === "home" && (
+              <Image
+                source={FIGMA_IMAGES.nav_active_glow}
+                style={styles.navActiveSpotlight}
+                resizeMode="stretch"
+              />
+            )}
             <FigmaSvg
               name={
                 activeTab === "home" ? "nav_home_active" : "nav_home_inactive"
@@ -1911,7 +1927,13 @@ export function WelcomeScreen({ session }: WelcomeScreenProps) {
             style={styles.bottomNavTab}
             onPress={() => setActiveTab("discover")}
           >
-            {activeTab === "discover" && <View style={styles.navActiveGlow} />}
+            {activeTab === "discover" && (
+              <Image
+                source={FIGMA_IMAGES.nav_active_glow}
+                style={styles.navActiveSpotlight}
+                resizeMode="stretch"
+              />
+            )}
             <FigmaSvg
               name={
                 activeTab === "discover"
@@ -1934,6 +1956,47 @@ export function WelcomeScreen({ session }: WelcomeScreenProps) {
             style={styles.bottomNavPlusBtn}
             onPress={() => setSubScreen("create-post")}
           >
+            <Svg
+              width={36}
+              height={36}
+              viewBox="0 0 36 36"
+              style={StyleSheet.absoluteFill}
+            >
+              <Defs>
+                <SvgLinearGradient
+                  id="navPlusBase"
+                  x1="4"
+                  y1="32"
+                  x2="32"
+                  y2="4"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <Stop offset="0%" stopColor="#F5A623" />
+                  <Stop offset="45%" stopColor="#F06A18" />
+                  <Stop offset="100%" stopColor="#ED4113" />
+                </SvgLinearGradient>
+                <SvgRadialGradient
+                  id="navPlusWarmGlow"
+                  cx="8"
+                  cy="28"
+                  r="22"
+                  gradientUnits="userSpaceOnUse"
+                >
+                  <Stop offset="0%" stopColor="#FFB838" stopOpacity="0.85" />
+                  <Stop offset="55%" stopColor="#F09B1E" stopOpacity="0.25" />
+                  <Stop offset="100%" stopColor="#ED4113" stopOpacity="0" />
+                </SvgRadialGradient>
+              </Defs>
+              <Circle cx="18" cy="18" r="17.5" fill="url(#navPlusBase)" />
+              <Circle
+                cx="18"
+                cy="18"
+                r="17.5"
+                fill="url(#navPlusWarmGlow)"
+                stroke="#F09B1E"
+                strokeWidth="1"
+              />
+            </Svg>
             <FigmaSvg name="nav_plus_icon" width={16} height={16} />
           </Pressable>
 
@@ -1942,7 +2005,13 @@ export function WelcomeScreen({ session }: WelcomeScreenProps) {
             style={styles.bottomNavTab}
             onPress={() => setActiveTab("events")}
           >
-            {activeTab === "events" && <View style={styles.navActiveGlow} />}
+            {activeTab === "events" && (
+              <Image
+                source={FIGMA_IMAGES.nav_active_glow}
+                style={styles.navActiveSpotlight}
+                resizeMode="stretch"
+              />
+            )}
             <FigmaSvg
               name={
                 activeTab === "events"
@@ -1965,7 +2034,13 @@ export function WelcomeScreen({ session }: WelcomeScreenProps) {
             style={styles.bottomNavTab}
             onPress={() => setActiveTab("profile")}
           >
-            {activeTab === "profile" && <View style={styles.navActiveGlow} />}
+            {activeTab === "profile" && (
+              <Image
+                source={FIGMA_IMAGES.nav_active_glow}
+                style={styles.navActiveSpotlight}
+                resizeMode="stretch"
+              />
+            )}
             <FigmaSvg
               name={
                 activeTab === "profile"
@@ -2285,6 +2360,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     padding: 0,
+    ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as any) : {}),
   },
   sectionHeading: {
     color: "#F2F2F8",
@@ -2682,17 +2758,12 @@ const styles = StyleSheet.create({
     gap: 4,
     position: "relative",
   },
-  navActiveGlow: {
+  navActiveSpotlight: {
     position: "absolute",
-    top: -13,
-    width: 48,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: "#F09B1E",
-    shadowColor: "#F09B1E",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.9,
-    shadowRadius: 12,
+    top: -12,
+    width: 88,
+    height: 74,
+    pointerEvents: "none",
   },
   bottomNavLabel: {
     color: "#FFFFFF",
@@ -2707,16 +2778,10 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#ED4113",
-    borderWidth: 1,
-    borderColor: "#F09B1E",
+    overflow: "hidden",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#F09B1E",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 6,
+    position: "relative",
   },
 
   /* Profile Menu Bottom Sheet (283:1188) */
@@ -2852,6 +2917,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     minHeight: 28,
+    ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as any) : {}),
   },
   mediaUploadBox: {
     width: "100%",
@@ -2936,6 +3002,7 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 14,
     padding: 0,
+    ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as any) : {}),
   },
   editBioInputWrap: {
     height: 121,
@@ -2951,6 +3018,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     padding: 0,
+    ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as any) : {}),
   },
   editSocialInputWrap: {
     height: 45,

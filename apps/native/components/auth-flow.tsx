@@ -179,15 +179,15 @@ export function AuthFlow({ initialMode = "signin", onSuccess }: AuthFlowProps) {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.root}
     >
-      {/* Top-right full-bleed glow matching Figma */}
-      <GradientWave height={280} />
+      {/* Top full-bleed blurred wave matching Figma (283:612 / 283:667) */}
+      <GradientWave variant="top" height={275} />
 
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
           {
-            paddingTop: Math.max(insets.top + 16, 32),
-            paddingBottom: Math.max(insets.bottom + 24, 32),
+            paddingTop: Math.max(insets.top, 32),
+            paddingBottom: Math.max(insets.bottom + 20, 24),
           },
         ]}
         showsVerticalScrollIndicator={false}
@@ -530,7 +530,7 @@ export function AuthFlow({ initialMode = "signin", onSuccess }: AuthFlowProps) {
       {isRecover && resetLinkSent && (
         <View style={styles.modalBackdrop}>
           <View style={styles.resetModalCard}>
-            <GradientWave height={180} position="top-left" />
+            <GradientWave variant="modal" height={130} />
             <Pressable
               style={styles.resetModalClose}
               onPress={() => {
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
   canvas: {
     width: 375,
     maxWidth: "100%",
-    minHeight: 748,
+    minHeight: 756,
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   panelDefault: {
-    marginTop: 52,
+    marginTop: 68,
   },
   panelWithBack: {
     marginTop: 32,
@@ -640,14 +640,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(239,68,68,0.14)",
     borderWidth: 1,
     borderColor: "rgba(239,68,68,0.35)",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginTop: -20,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: -26,
+    marginBottom: -14,
   },
   errorText: {
     color: "#FF8787",
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 16,
     textAlign: "center",
   },
   successBanner: {
@@ -655,14 +657,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(81,207,102,0.14)",
     borderWidth: 1,
     borderColor: "rgba(81,207,102,0.35)",
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginTop: -20,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: -26,
+    marginBottom: -14,
   },
   successText: {
     color: "#69DB7C",
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 16,
     textAlign: "center",
   },
 
@@ -726,6 +730,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     padding: 0,
     flex: 1,
+    ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as any) : {}),
   },
   eyeBtn: {
     width: 20,
