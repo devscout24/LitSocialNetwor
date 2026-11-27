@@ -1,5 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   Image,
   ImageSourcePropType,
   Platform,
@@ -21,6 +23,10 @@ import Svg, {
 
 import { FIGMA_IMAGES, FigmaSvg } from "@/components/figma-assets";
 import { GradientWave } from "@/components/lit-brand";
+import {
+  StoryFlameAvatar,
+  StoryFlameStage,
+} from "@/components/story-flame-avatar";
 import { useAppAuth, UserSession } from "@/lib/auth-state";
 
 export type MainTab = "home" | "discover" | "events" | "profile";
@@ -108,11 +114,65 @@ const INITIAL_POSTS: FeedPost[] = [
   },
 ];
 
-const FLAME_STORIES = [
-  { id: "story_1", name: "athik.design", avatar: FIGMA_IMAGES.story_athik },
-  { id: "story_2", name: "ui_ux frog", avatar: FIGMA_IMAGES.story_frog },
-  { id: "story_3", name: "dev_ninja", avatar: FIGMA_IMAGES.story_ninja },
-  { id: "story_4", name: "dev_artisan", avatar: FIGMA_IMAGES.story_artisan },
+const FLAME_STORIES: Array<{
+  id: string;
+  name: string;
+  avatar: ImageSourcePropType;
+  media: ImageSourcePropType;
+  timeAgo: string;
+  location: string;
+  caption: string;
+  ageHours: number;
+  initialStage: StoryFlameStage;
+}> = [
+  // Recent story (15m ago): full blazing Figma flame + rising wisps + fast animation
+  {
+    id: "story_1",
+    name: "athik.design",
+    avatar: FIGMA_IMAGES.story_athik,
+    media: FIGMA_IMAGES.post_1,
+    timeAgo: "15m ago",
+    location: "Warehouse 23 · Brooklyn, NY",
+    caption: "🔥 Main stage soundcheck before Neon Nights kicks off tonight!",
+    ageHours: 0.25,
+    initialStage: "full",
+  },
+  // Medium-aged story (6h ago): smaller Figma flame + slower animation
+  {
+    id: "story_2",
+    name: "ui_ux frog",
+    avatar: FIGMA_IMAGES.story_frog,
+    media: FIGMA_IMAGES.event_hero,
+    timeAgo: "6h ago",
+    location: "Sunset Groove Arena",
+    caption: "✨ Golden hour crowd energy is unreal right now.",
+    ageHours: 6,
+    initialStage: "medium",
+  },
+  // Older story (15h ago): low slow Figma flame
+  {
+    id: "story_3",
+    name: "dev_ninja",
+    avatar: FIGMA_IMAGES.story_ninja,
+    media: FIGMA_IMAGES.post_2,
+    timeAgo: "15h ago",
+    location: "Neon Underground · NYC",
+    caption: "🎧 Late night synth session in the booth.",
+    ageHours: 15,
+    initialStage: "small",
+  },
+  // Old story (23h ago): no fire (dim ring only)
+  {
+    id: "story_4",
+    name: "dev_artisan",
+    avatar: FIGMA_IMAGES.story_artisan,
+    media: FIGMA_IMAGES.gallery_3,
+    timeAgo: "23h ago",
+    location: "Williamsburg Rooftop",
+    caption: "🌃 Last night's afterhours skyline view.",
+    ageHours: 23,
+    initialStage: "none",
+  },
 ];
 
 const TRENDING_TAGS = [
@@ -227,6 +287,56 @@ export function WelcomeScreen({ session }: WelcomeScreenProps) {
 
   // Feed & Discover interactive state
   const [posts, setPosts] = useState<FeedPost[]>(INITIAL_POSTS);
+  const [activeStoryIndex, setActiveStoryIndex] = useState<number | null>(null);
+  const [storyReplyText, setStoryReplyText] = useState("");
+  const [storyLikedMap, setStoryLikedMap] = useState<Record<string, boolean>>(
+    {},
+  );
+  const storyProgressAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (activeStoryIndex === null) {
+      storyProgressAnim.stopAnimation();
+      storyProgressAnim.setValue(0);
+      return;
+    }
+
+    storyProgressAnim.setValue(0);
+    const anim = Animated.timing(storyProgressAnim, {
+      toValue: 1,
+      duration: 5000,
+      easing: Easing.linear,
+      useNativeDriver: false,
+    });
+
+    anim.start(({ finished }) => {
+      if (finished) {
+        setActiveStoryIndex((prev) => {
+          if (prev === null) return null;
+          return prev < FLAME_STORIES.length - 1 ? prev + 1 : null;
+        });
+      }
+    });
+
+    return () => {
+      anim.stop();
+    };
+  }, [activeStoryIndex, storyProgressAnim]);
+
+  const handlePrevStory = () => {
+    setActiveStoryIndex((prev) => {
+      if (prev === null) return null;
+      return prev > 0 ? prev - 1 : 0;
+    });
+  };
+
+  const handleNextStory = () => {
+    setActiveStoryIndex((prev) => {
+      if (prev === null) return null;
+      return prev < FLAME_STORIES.length - 1 ? prev + 1 : null;
+    });
+  };
+
   const [discoverSearch, setDiscoverSearch] = useState("");
   const [eventsSearch, setEventsSearch] = useState("");
   const [vibingMap, setVibingMap] = useState<Record<string, boolean>>({
@@ -1402,17 +1512,25 @@ export function WelcomeScreen({ session }: WelcomeScreenProps) {
               </Text>
             </Pressable>
 
-            {/* 4 Flame Stories (283:878..896) */}
-            {FLAME_STORIES.map((st) => (
-              <View key={st.id} style={styles.flameStoryCol}>
-                <View style={styles.flameRingBox}>
-                  <FigmaSvg name="story_flame_ring" />
-                  <Image source={st.avatar} style={styles.flameStoryAvatar} />
-                </View>
+            {/* 4 Flame Stories (283:878..896) with age-based Figma fire animation & Instagram-style story viewer on tap */}
+            {FLAME_STORIES.map((st, idx) => (
+              <Pressable
+                key={st.id}
+                style={styles.flameStoryCol}
+                onPress={() => {
+                  setStoryReplyText("");
+                  setActiveStoryIndex(idx);
+                }}
+              >
+                <StoryFlameAvatar
+                  avatar={st.avatar}
+                  ageHours={st.ageHours}
+                  stage={st.initialStage}
+                />
                 <Text style={styles.storyLabel} numberOfLines={1}>
                   {st.name}
                 </Text>
-              </View>
+              </Pressable>
             ))}
           </ScrollView>
 
@@ -2127,6 +2245,162 @@ export function WelcomeScreen({ session }: WelcomeScreenProps) {
           </View>
         </View>
       )}
+
+      {/* ── INSTAGRAM-STYLE FULL-SCREEN STORY VIEWER ── */}
+      {activeStoryIndex !== null && FLAME_STORIES[activeStoryIndex] && (() => {
+        const currentStory = FLAME_STORIES[activeStoryIndex];
+        const isStoryLiked = !!storyLikedMap[currentStory.id];
+        return (
+          <View style={styles.storyViewerOverlay}>
+            {/* Full-bleed Story Media */}
+            <View style={styles.storyViewerStage}>
+              <Image
+                source={currentStory.media}
+                style={styles.storyViewerMedia}
+                resizeMode="cover"
+              />
+              <View style={styles.storyViewerScrimTop} />
+              <View style={styles.storyViewerScrimBottom} />
+
+              {/* Left / Right Tap Navigation Zones */}
+              <View style={styles.storyTapRow}>
+                <Pressable
+                  style={styles.storyTapLeft}
+                  onPress={handlePrevStory}
+                />
+                <Pressable
+                  style={styles.storyTapRight}
+                  onPress={handleNextStory}
+                />
+              </View>
+
+              {/* Top Progress Bars + Author Header */}
+              <View
+                style={[
+                  styles.storyViewerTopWrap,
+                  { paddingTop: Math.max(insets.top + 8, 18) },
+                ]}
+              >
+                {/* Segmented Story Progress Bars */}
+                <View style={styles.storyProgressRow}>
+                  {FLAME_STORIES.map((st, idx) => {
+                    const isCompleted = idx < activeStoryIndex;
+                    const isActive = idx === activeStoryIndex;
+                    return (
+                      <View key={st.id} style={styles.storyProgressTrack}>
+                        {isCompleted && (
+                          <View
+                            style={[styles.storyProgressFill, { width: "100%" }]}
+                          />
+                        )}
+                        {isActive && (
+                          <Animated.View
+                            style={[
+                              styles.storyProgressFill,
+                              {
+                                width: storyProgressAnim.interpolate({
+                                  inputRange: [0, 1],
+                                  outputRange: ["0%", "100%"],
+                                }),
+                              },
+                            ]}
+                          />
+                        )}
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* Author Info + Close Button */}
+                <View style={styles.storyViewerHeader}>
+                  <View style={styles.storyViewerUserLeft}>
+                    <View style={styles.storyViewerAvatarRing}>
+                      <Image
+                        source={currentStory.avatar}
+                        style={styles.storyViewerAvatar}
+                      />
+                    </View>
+                    <View style={{ gap: 2 }}>
+                      <View style={styles.storyViewerNameRow}>
+                        <Text style={styles.storyViewerUsername}>
+                          {currentStory.name}
+                        </Text>
+                        <Text style={styles.storyViewerTime}>
+                          {currentStory.timeAgo}
+                        </Text>
+                      </View>
+                      <View style={styles.storyViewerLocationRow}>
+                        <FigmaSvg name="icon_pin_small" width={11} height={11} />
+                        <Text style={styles.storyViewerLocationText}>
+                          {currentStory.location}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <Pressable
+                    style={styles.storyViewerCloseBtn}
+                    onPress={() => setActiveStoryIndex(null)}
+                    hitSlop={12}
+                  >
+                    <FigmaSvg name="icon_close" width={18} height={18} />
+                  </Pressable>
+                </View>
+              </View>
+
+              {/* Bottom Caption + Instagram-style Reply & Reaction Bar */}
+              <View
+                style={[
+                  styles.storyViewerBottomWrap,
+                  { paddingBottom: Math.max(insets.bottom + 14, 20) },
+                ]}
+              >
+                <View style={styles.storyCaptionPill}>
+                  <Text style={styles.storyCaptionText}>
+                    {currentStory.caption}
+                  </Text>
+                </View>
+
+                <View style={styles.storyReplyBar}>
+                  <View style={styles.storyReplyInputWrap}>
+                    <TextInput
+                      style={styles.storyReplyInput}
+                      value={storyReplyText}
+                      onChangeText={setStoryReplyText}
+                      placeholder={`Send message to ${currentStory.name}...`}
+                      placeholderTextColor="rgba(255,255,255,0.55)"
+                      returnKeyType="send"
+                      onSubmitEditing={() => setStoryReplyText("")}
+                    />
+                  </View>
+
+                  <Pressable
+                    style={[
+                      styles.storyActionCircle,
+                      isStoryLiked && styles.storyActionCircleActive,
+                    ]}
+                    onPress={() =>
+                      setStoryLikedMap((prev) => ({
+                        ...prev,
+                        [currentStory.id]: !prev[currentStory.id],
+                      }))
+                    }
+                  >
+                    <FigmaSvg name="icon_heart_filled" width={20} height={20} />
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.storyActionCircle}
+                    onPress={handleNextStory}
+                  >
+                    <FigmaSvg name="icon_share_box" width={20} height={20} />
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </View>
+        );
+      })()}
     </View>
   );
 }
@@ -2169,6 +2443,196 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     gap: 16,
     alignItems: "flex-end",
+  },
+  /* Instagram-style Full-Screen Story Viewer */
+  storyViewerOverlay: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    backgroundColor: "#07070E",
+    zIndex: 100,
+  },
+  storyViewerStage: {
+    flex: 1,
+    position: "relative",
+    justifyContent: "space-between",
+  },
+  storyViewerMedia: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+  },
+  storyViewerScrimTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 150,
+    backgroundColor: "rgba(7,7,14,0.52)",
+  },
+  storyViewerScrimBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 190,
+    backgroundColor: "rgba(7,7,14,0.68)",
+  },
+  storyTapRow: {
+    position: "absolute",
+    top: 100,
+    bottom: 120,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    zIndex: 2,
+  },
+  storyTapLeft: {
+    flex: 35,
+    height: "100%",
+  },
+  storyTapRight: {
+    flex: 65,
+    height: "100%",
+  },
+  storyViewerTopWrap: {
+    paddingHorizontal: 16,
+    gap: 12,
+    zIndex: 5,
+  },
+  storyProgressRow: {
+    flexDirection: "row",
+    gap: 6,
+    width: "100%",
+  },
+  storyProgressTrack: {
+    flex: 1,
+    height: 3,
+    borderRadius: 99,
+    backgroundColor: "rgba(255,255,255,0.28)",
+    overflow: "hidden",
+  },
+  storyProgressFill: {
+    height: "100%",
+    borderRadius: 99,
+    backgroundColor: "#ED4113",
+  },
+  storyViewerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  storyViewerUserLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  storyViewerAvatarRing: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: "#ED4113",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  storyViewerAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+  },
+  storyViewerNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  storyViewerUsername: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  storyViewerTime: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 12,
+  },
+  storyViewerLocationRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  storyViewerLocationText: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: 11,
+  },
+  storyViewerCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(7,7,14,0.55)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  storyViewerBottomWrap: {
+    paddingHorizontal: 16,
+    gap: 12,
+    zIndex: 5,
+  },
+  storyCaptionPill: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(7,7,14,0.68)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  storyCaptionText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    lineHeight: 19,
+  },
+  storyReplyBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  storyReplyInputWrap: {
+    flex: 1,
+    height: 44,
+    borderRadius: 88,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    paddingHorizontal: 16,
+    justifyContent: "center",
+  },
+  storyReplyInput: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    padding: 0,
+    ...(Platform.OS === "web" ? ({ outlineStyle: "none" } as any) : {}),
+  },
+  storyActionCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  storyActionCircleActive: {
+    backgroundColor: "rgba(237,65,19,0.28)",
+    borderColor: "#ED4113",
   },
   yourStoryCol: {
     width: 65,
